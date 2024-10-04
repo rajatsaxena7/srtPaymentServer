@@ -1,0 +1,19 @@
+{
+  "name": "srtpaymentserver",
+  "version": "1.0.0",
+  "description": "srt payment s2s handling",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "express": "^4.21.0",
+    "http": "^0.0.1-security",
+    "socket.io": "^4.8.0"
+  }
+}
