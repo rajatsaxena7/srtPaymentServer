@@ -109,8 +109,8 @@ app.post("/phonepe/callback", (req, res) => {
     return res.status(400).send("Invalid response data");
   }
 
-  const transactionId = paymentData.merchantTransactionId || paymentData.transactionId;
-  const status = paymentData.status || (paymentData.data ? paymentData.data.paymentState : null);
+  const transactionId = paymentData.data.merchantTransactionId || paymentData.data.merchantTransactionId;
+  const status = paymentData.code || (paymentData.data ? paymentData.data.paymentState : null);
 
   if (!transactionId || !status) {
     console.error("Missing transactionId or status in paymentData");
