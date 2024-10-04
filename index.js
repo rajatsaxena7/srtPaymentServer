@@ -36,19 +36,24 @@ io.on("connection", (socket) => {
 });
 
 function computeSignature(response, secretKey) {
-  const data = `${response}/v1/transaction/response${secretKey}`;
+  const data = `${response}/pg/v1/status${secretKey}`; // Use the correct API endpoint path
   return crypto.createHash("sha256").update(data).digest("hex");
 }
 
 app.post("/phonepe/callback", (req, res) => {
   const { response } = req.body;
-  const signature = req.headers["x-verify"];
+  const xVerifyHeader = req.headers["x-verify"];
 
-  if (!response || !signature) {
+  if (!response || !xVerifyHeader) {
     return res.status(400).send("Invalid request");
   }
 
-  const secretKey = "6362bd9f-17b6-4eb2-b030-1ebbb78ce518";
+  // Split x-verify header to extract signature and salt index
+  const [signature, saltIndex] = xVerifyHeader.split("###");
+
+  // Use the appropriate secretKey based on saltIndex
+  const secretKey = "6362bd9f-17b6-4eb2-b030-1ebbb78ce518"; // Replace with your actual salt key
+
   const expectedSignature = computeSignature(response, secretKey);
 
   if (signature !== expectedSignature) {
@@ -64,8 +69,9 @@ app.post("/phonepe/callback", (req, res) => {
     return res.status(400).send("Invalid response data");
   }
 
-  const transactionId = paymentData.transactionId;
-  const status = paymentData.status;
+  // Extract transactionId and status
+  const transactionId = paymentData.merchantTransactionId;
+  const status = paymentData.data ? paymentData.data.paymentState : paymentData.status;
 
   paymentStatuses[transactionId] = status;
 
