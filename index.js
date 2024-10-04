@@ -59,33 +59,48 @@ function computeSignature(response, secretKey) {
 }
 
 app.post("/phonepe/callback", (req, res) => {
-  console.log("Received callback from PhonePe");
   console.log("Headers:", req.headers);
   console.log("Body:", req.body);
   console.log("Raw Body:", req.rawBody);
 
-  const responseString = req.body.response;
+  let responseString;
 
-  if (!responseString) {
-    console.error("Missing response in body");
-    return res.status(400).send("Invalid request");
+  if (req.body && req.body.response) {
+    responseString = req.body.response;
+  } else if (req.rawBody) {
+    const contentType = req.headers['content-type'];
+    if (contentType.includes('application/json')) {
+      const parsedBody = JSON.parse(req.rawBody);
+      responseString = parsedBody.response;
+    } else if (contentType.includes('application/x-www-form-urlencoded')) {
+      const parsedBody = new URLSearchParams(req.rawBody);
+      responseString = parsedBody.get('response');
+    } else {
+      console.error("Unsupported content type:", contentType);
+      return res.status(400).send("Unsupported content type");
+    }
+  } else {
+    console.error("No body received");
+    return res.status(400).send("No request body");
   }
 
   const xVerifyHeader = req.headers["x-verify"];
 
-  if (!xVerifyHeader) {
-    console.error("Missing x-verify header");
+  if (!responseString || !xVerifyHeader) {
+    console.error("Missing response or x-verify header");
     return res.status(400).send("Invalid request");
   }
 
-  // Split x-verify header to extract signature and salt index
   const [signature, saltIndex] = xVerifyHeader.split("###");
 
-  // Use the appropriate secretKey based on saltIndex
-  const secretKey = "6362bd9f-17b6-4eb2-b030-1ebbb78ce518"; // Replace with your actual salt key
+  const secretKey = "YOUR_SECRET_KEY"; // Replace with your actual secret key
 
   const expectedSignature = computeSignature(responseString, secretKey);
 
+  if (signature !== expectedSignature) {
+    console.error("Signature mismatch");
+    return res.status(401).send("Unauthorized");
+  }
 
   const decodedData = Buffer.from(responseString, "base64").toString("utf-8");
   let paymentData;
@@ -97,12 +112,8 @@ app.post("/phonepe/callback", (req, res) => {
     return res.status(400).send("Invalid response data");
   }
 
-  // Extract transactionId and status
-  const transactionId =
-    paymentData.merchantTransactionId || paymentData.transactionId;
-  const status =
-    paymentData.status ||
-    (paymentData.data ? paymentData.data.paymentState : null);
+  const transactionId = paymentData.merchantTransactionId || paymentData.transactionId;
+  const status = paymentData.status || (paymentData.data ? paymentData.data.paymentState : null);
 
   if (!transactionId || !status) {
     console.error("Missing transactionId or status in paymentData");
